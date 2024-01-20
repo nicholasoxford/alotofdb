@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { CreateDatabaseQueueSchema } from '@repo/alot-zod';
 /**
  * Welcome to Cloudflare Workers!
  *
@@ -163,13 +163,6 @@ export default {
 		}
 	},
 };
-
-const CreateDatabaseQueueSchema = z.object({
-	user_id: z.string(),
-	database_uuid: z.string(),
-	name: z.string(),
-	KV_KEY: z.string(),
-});
 
 type progressData = {
 	databaseCreated: boolean;

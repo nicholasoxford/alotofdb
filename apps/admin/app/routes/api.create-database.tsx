@@ -1,7 +1,11 @@
 import { json, type ActionFunctionArgs } from "@remix-run/cloudflare";
+import {
+  CreateDatabaseQueueSchema,
+  CreateDatabaseQueueSchemaType,
+  createDatabaseFormSchema,
+} from "@repo/alot-zod";
 import { createServerClient } from "@supabase/auth-helpers-remix";
-import type { CreateDatabaseQueueSchemaType } from "schemas";
-import { CreateDatabaseQueueSchema, createDatabaseFormSchema } from "schemas";
+
 export async function action({ request, context }: ActionFunctionArgs) {
   // grab server side env variables from context
   const env = context.env as Env;

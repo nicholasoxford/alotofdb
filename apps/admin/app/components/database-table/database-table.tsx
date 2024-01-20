@@ -12,8 +12,8 @@ import {
   TableCell,
   Table,
 } from "../ui/table";
-import type { DatabaseTableType } from "schemas";
 import { useEffect, useState } from "react";
+import { DatabaseTableType } from "@repo/alot-zod";
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];

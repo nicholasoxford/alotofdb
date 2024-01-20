@@ -3,7 +3,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "@remix-run/cloudflare";
-import { DeleteDatabaseSchema } from "schemas";
+import { DeleteDatabaseSchema } from "@repo/alot-zod";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   // return hello world

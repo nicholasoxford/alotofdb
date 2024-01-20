@@ -4,9 +4,9 @@ import {
   type LoaderFunctionArgs,
 } from "@remix-run/cloudflare";
 import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { Database, DatabaseTableType } from "@repo/alot-zod";
 import { createServerClient } from "@supabase/auth-helpers-remix";
 import { useEffect, useState } from "react";
-import type { Database, DatabaseTableType } from "schemas";
 import CreateDatabase from "~/components/create-database";
 import { Columns } from "~/components/database-table/columns";
 import { DatabaseTable } from "~/components/database-table/database-table";

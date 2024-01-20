@@ -1,8 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { DatabaseTableType } from "schemas";
 import { Button } from "../ui/button";
 import { Form, Link } from "@remix-run/react";
 import { Loader2 } from "lucide-react";
+import { DatabaseTableType } from "@repo/alot-zod";
 
 // i need columns to be a function that accepts a useState
 

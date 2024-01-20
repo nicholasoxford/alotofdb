@@ -1,12 +1,11 @@
 import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { CheckProgressDatabaseSchema } from "schemas";
+import { CheckProgressDatabaseSchema } from "@repo/alot-zod";
 
 export const loader = async ({ request, context }: LoaderFunctionArgs) => {
   const env = context.env as Env;
   const json = request.json();
-  const parsedStatusCheck = await CheckProgressDatabaseSchema.safeParseAsync(
-    json
-  );
+  const parsedStatusCheck =
+    await CheckProgressDatabaseSchema.safeParseAsync(json);
   if (!parsedStatusCheck.success) {
     return new Response(JSON.stringify({ error: parsedStatusCheck.error }), {
       status: 400,
