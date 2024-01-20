@@ -1,0 +1,5 @@
+-- Migration number: 0002 	 2024-01-19T18:17:41.317Z
+ALTER TABLE
+    databases
+ADD
+    COLUMN isDeleted BOOLEAN NOT NULL DEFAULT FALSE;
