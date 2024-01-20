@@ -12,6 +12,8 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+import { Database } from '@repo/alot-zod';
+
 export interface Env {
 	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
 	// MY_KV_NAMESPACE: KVNamespace;
@@ -29,22 +31,90 @@ export interface Env {
 	// MY_QUEUE: Queue;
 	//
 	// Example binding to a D1 Database. Learn more at https://developers.cloudflare.com/workers/platform/bindings/#d1-database-bindings
-	// DB: D1Database
+	DB: D1Database;
+	ACCOUNT_IDENTIFIER: string;
+	CF_API_KEY: string;
+	ZONE_ID: string;
 }
 
 export default {
 	// The scheduled handler is invoked at the interval set in our wrangler.toml's
 	// [[triggers]] configuration.
 	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-		// A Cron Trigger can make requests to other endpoints on the Internet,
-		// publish to a Queue, query a D1 Database, and much more.
-		//
-		// We'll keep it simple and make an API call to a Cloudflare API:
-		let resp = await fetch('https://api.cloudflare.com/client/v4/ips');
-		let wasSuccessful = resp.ok ? 'success' : 'fail';
+		// Grab databases from DB
+		const { DB } = env;
+		const dbQuery = await DB.prepare(`SELECT * FROM databases where user_id is not null and uuid is not null AND isDeleted = false`).run();
 
-		// You could store this result in KV, write to a D1 Database, or publish to a Queue.
+		const databases = dbQuery.results as Database[];
+
+		console.log('databases', databases);
+
+		for (const database of databases) {
+			const query = `
+				query($accountId: String!, $startDate: String!, $endDate: String!, $databaseId: String!) {
+					viewer {
+					accounts(filter: { accountTag: $accountId }) {
+						d1AnalyticsAdaptiveGroups(
+						limit: 10000
+						filter: {
+							date_geq: $startDate
+							date_leq: $endDate
+							databaseId: $databaseId
+						}
+						orderBy: [date_DESC]
+						) {
+						sum {
+							readQueries
+							writeQueries
+						}
+						dimensions {
+							date
+							databaseId
+						} 
+						}
+					}
+					}
+				}
+				`;
+			const endDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+			const startDate = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0]; // Date one month ago
+
+			// Replace these with actual values
+			const variables = {
+				accountId: env.ACCOUNT_IDENTIFIER,
+				startDate,
+				endDate,
+				databaseId: database.uuid,
+			};
+
+			const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					// Add your authentication header here, for example:
+					Authorization: `Bearer ${env.CF_API_KEY}`,
+				},
+				body: JSON.stringify({
+					query: query,
+					variables: variables,
+				}),
+			});
+			if (!resp.ok) {
+				console.error(
+					JSON.stringify({
+						text: await resp.text(),
+						staus: resp.status,
+						statusText: resp.statusText,
+					}),
+				);
+				continue;
+			}
+
+			const analyticsJson = await resp.json();
+			console.log({ analyticsJson });
+		}
+
 		// In this template, we'll just log the result:
-		console.log(`trigger fired at ${event.cron}: ${wasSuccessful}`);
+		console.log(`trigger fired at ${event.cron}: ${databases}`);
 	},
 };
