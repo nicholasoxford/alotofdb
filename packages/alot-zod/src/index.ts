@@ -13,3 +13,12 @@ export {
   type CreateDatabaseQueueSchemaType,
   type CheckProgressDatabaseSchemaType,
 } from "./database";
+
+export {
+  DatabaseAnalyticsSchema,
+  parseD1ResponseSchema,
+  userUsageTotalsSchema,
+  type DatabaseAnalytics,
+  type ParseD1Response,
+  type UserUsageTotals,
+} from "./analytics";

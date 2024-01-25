@@ -1,17 +1,19 @@
 {
-	"name": "analytics-cron",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler publish",
-		"start": "wrangler dev"
-	},
-	"dependencies": {
-		"@repo/alot-zod": "workspace:*"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230419.0",
-		"typescript": "^5.0.4",
-		"wrangler": "^3.0.0"
-	}
+  "name": "analytics-cron",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler publish",
+    "start": "wrangler dev"
+  },
+  "dependencies": {
+    "@repo/alot-analytics": "workspace:*",
+    "@repo/alot-zod": "workspace:*",
+    "@supabase/supabase-js": "^2.39.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20230419.0",
+    "typescript": "^5.0.4",
+    "wrangler": "^3.0.0"
+  }
 }

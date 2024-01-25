@@ -12,8 +12,9 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-import { Database } from '@repo/alot-zod';
-
+import { fetchOneMonthOfD1DatabasesAnalytics, grabDatabaseQuery } from '@repo/alot-analytics';
+import { Database, UserUsageTotals } from '@repo/alot-zod';
+import { createClient } from '@supabase/supabase-js';
 export interface Env {
 	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
 	// MY_KV_NAMESPACE: KVNamespace;
@@ -35,6 +36,8 @@ export interface Env {
 	ACCOUNT_IDENTIFIER: string;
 	CF_API_KEY: string;
 	ZONE_ID: string;
+	SUPABASE_URL: string;
+	SUPABASE_KEY: string;
 }
 
 export default {
@@ -42,79 +45,71 @@ export default {
 	// [[triggers]] configuration.
 	async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
 		// Grab databases from DB
-		const { DB } = env;
-		const dbQuery = await DB.prepare(`SELECT * FROM databases where user_id is not null and uuid is not null AND isDeleted = false`).run();
 
-		const databases = dbQuery.results as Database[];
+		// Grab list of users from supabase
+		const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+		const authList = await supabase.auth.admin.listUsers();
 
-		console.log('databases', databases);
+		// For each user we are going to make an analytics repport
+		for (const user of authList.data.users) {
+			// Fetch associated databases
+			const { DB } = env;
+			const dbQuery = await DB.prepare(`SELECT * FROM databases where uuid is not null AND isDeleted = false and user_id = ?`)
+				.bind(user.id)
+				.run();
 
-		for (const database of databases) {
-			const query = `
-				query($accountId: String!, $startDate: String!, $endDate: String!, $databaseId: String!) {
-					viewer {
-					accounts(filter: { accountTag: $accountId }) {
-						d1AnalyticsAdaptiveGroups(
-						limit: 10000
-						filter: {
-							date_geq: $startDate
-							date_leq: $endDate
-							databaseId: $databaseId
-						}
-						orderBy: [date_DESC]
-						) {
-						sum {
-							readQueries
-							writeQueries
-						}
-						dimensions {
-							date
-							databaseId
-						} 
-						}
-					}
-					}
-				}
-				`;
-			const endDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-			const startDate = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0]; // Date one month ago
+			const databases = dbQuery.results as Database[];
 
-			// Replace these with actual values
-			const variables = {
-				accountId: env.ACCOUNT_IDENTIFIER,
+			// Get databaseIds
+			const databaseIds = databases.map((database) => database.uuid).filter((databaseId) => databaseId !== null) as string[];
+
+			// Date one month ago
+			const startDate = new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];
+			// Current date in YYYY-MM-DD format
+			const endDate = new Date().toISOString().split('T')[0];
+			// Returns list of analytics
+			const analyticsResults = await fetchOneMonthOfD1DatabasesAnalytics({
+				databaseIds,
+				env,
 				startDate,
 				endDate,
-				databaseId: database.uuid,
-			};
-
-			const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					// Add your authentication header here, for example:
-					Authorization: `Bearer ${env.CF_API_KEY}`,
-				},
-				body: JSON.stringify({
-					query: query,
-					variables: variables,
-				}),
 			});
-			if (!resp.ok) {
-				console.error(
-					JSON.stringify({
-						text: await resp.text(),
-						staus: resp.status,
-						statusText: resp.statusText,
-					}),
-				);
-				continue;
+
+			const userUsageTotals = {
+				readQueries: 0,
+				writeQueries: 0,
+				rowsRead: 0,
+				rowsWritten: 0,
+			} as UserUsageTotals;
+
+			for (const database of analyticsResults) {
+				// get user_id from databases\
+
+				const { sum } = database;
+				const { readQueries, writeQueries, rowsRead, rowsWritten } = sum;
+
+				userUsageTotals.readQueries += readQueries;
+				userUsageTotals.writeQueries += writeQueries;
+				userUsageTotals.rowsRead += rowsRead;
+				userUsageTotals.rowsWritten += rowsWritten;
 			}
 
-			const analyticsJson = await resp.json();
-			console.log({ analyticsJson });
+			await DB.prepare(
+				`INSERT INTO analyticSummaryReports ( readQueries, writeQueries, rowsRead, rowsWritten, startingDate, endingDate, numberOfDatabases, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			)
+				.bind(
+					userUsageTotals.readQueries,
+					userUsageTotals.writeQueries,
+					userUsageTotals.rowsRead,
+					userUsageTotals.rowsWritten,
+					startDate,
+					endDate,
+					databaseIds.length,
+					user.id,
+				)
+				.run();
 		}
-
 		// In this template, we'll just log the result:
-		console.log(`trigger fired at ${event.cron}: ${databases}`);
+		console.log(`trigger fired at ${event.cron}}`);
 	},
 };
