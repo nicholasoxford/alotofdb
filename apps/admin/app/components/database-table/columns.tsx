@@ -15,11 +15,18 @@ export function Columns({
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   loadingNumberOfTables: boolean;
 }): ColumnDef<DatabaseTableType>[] {
-  console.log({ loadingNumberOfTables });
   return [
     {
       accessorKey: "name",
       header: "Name",
+      cell: ({ row }) => {
+        const database = row.original;
+        return (
+          <Link to={`/databases/${database.uuid}`}>
+            <div>{database.name}</div>
+          </Link>
+        );
+      },
     },
     {
       accessorKey: "created_at",

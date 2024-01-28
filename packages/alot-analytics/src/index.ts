@@ -78,6 +78,9 @@ export async function fetchOneMonthOfD1DatabasesAnalytics({
   }
 
   const analyticsJson = await resp.json();
+  // @ts-ignore
+  console.log({ analyticsJson: analyticsJson.data.viewer.accounts });
+
   const parseD1Response =
     await parseD1ResponseSchema.safeParseAsync(analyticsJson);
   if (!parseD1Response.success) {

@@ -38,7 +38,8 @@
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",
     "unique-names-generator": "^4.7.1",
-    "@repo/alot-zod": "workspace:*"
+    "@repo/alot-zod": "workspace:*",
+    "@repo/alot-analytics": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20231218.0",
